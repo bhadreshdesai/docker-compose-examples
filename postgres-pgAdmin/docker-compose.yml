@@ -1,0 +1,56 @@
+version: "3"
+
+services:
+  #---------------------------------------
+  # postgres database container
+  #---------------------------------------
+  postgres:
+    container_name: ${COMPOSE_PROJECT_NAME}_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # PGDATA: /data/postgres
+    image: "postgres:${TAG_POSTGRES}"
+    networks:
+      - net
+    ports:
+      - ${PORT_POSTGRES}:5432
+    restart: "unless-stopped"
+    volumes:
+      # - postgres_data:/data/postgres
+      - postgres_data:/var/lib/postgresql/data
+
+  #---------------------------------------
+  # pgadmin container
+  #---------------------------------------
+  pgadmin:
+    container_name: ${COMPOSE_PROJECT_NAME}_pgadmin
+    depends_on:
+      - postgres
+    entrypoint:
+      - "/bin/sh"
+      - "-c"
+      - "/bin/echo '{\"Servers\":{\"1\": {\"Name\": \"docker_postgres\",\"Group\": \"Servers\",\"Host\": \"host.docker.internal\",\"Port\": 5432,\"MaintenanceDB\": \"${POSTGRES_DB}\",\"Username\": \"${POSTGRES_USER}\",\"PassFile\": \"/tmp/pgpassfile\",\"SSLMode\": \"prefer\"}}}' > /tmp/servers.json && /bin/echo 'host.docker.internal:5432:*:${POSTGRES_USER}:${POSTGRES_PASSWORD}' > /tmp/pgpassfile && chmod 600 /tmp/pgpassfile && /entrypoint.sh"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGADMIN_SERVER_JSON_FILE: ${PGADMIN_SERVER_JSON_FILE}
+    image: "dpage/pgadmin4:${TAG_PGADMIN4}"
+    networks:
+      - net
+    ports:
+      - "${PORT_PGADMIN4}:80"
+    restart: "unless-stopped"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+networks:
+  net:
+
+
+volumes:
+  postgres_data:
+  pgadmin_data:
